@@ -1,80 +1,256 @@
-# Adapter Design Pattern
+# Adapter Pattern - Weight Conversion System
 
-## Overview
-The **Adapter Pattern** is a **structural design pattern** that allows two incompatible interfaces or systems to work together.  
-It acts as a **bridge** between your system and a third-party or legacy system.
+**Type**: Structural Design Pattern
 
----
+## Definition
 
-## Why Use Adapter Pattern?
+**Adapter Pattern**: Convert the interface of a class into another interface clients expect. Adapter lets classes work together that couldn't otherwise because of incompatible interfaces.
 
-- To **connect incompatible systems** without modifying their source code.  
-- To **adapt data formats** between systems (e.g., JSON → XML).  
-- To **reuse existing classes** in a different interface.
+**Purpose**: Bridge the gap between incompatible interfaces by wrapping an existing class with a new interface.
 
-**Example Scenario:**  
-- Your system expects JSON input, but a third-party service provides XML.  
-- An **adapter** converts XML to JSON so your system can process it without changes.
+**Problem**: 
+- Client expects weight in **kilograms (metric)**
+- Existing system returns weight in **pounds (imperial)**
+- Cannot modify the existing Imperial weighing machine
 
----
-
-## Types of Adapter Pattern
-
-### Class-Level Adapter
-- Uses **inheritance** to adapt one interface to another.  
-- Creates **tight coupling** between adapter and adaptee.
-
-### Object-Level Adapter
-- Uses **composition (has-a relationship)** to adapt an object.  
-- Provides **flexibility** and looser coupling.
+**Solution**: 
+Create an adapter that converts pounds to kilograms, allowing client to work with the Imperial machine through a metric interface.
 
 ---
 
-## Real-World Examples
+## UML Diagrams
 
-- **Java API**
-  - `InputStreamReader` converts a byte stream to a character stream.  
-  - `OutputStreamWriter` converts a character stream to a byte stream.
+### 1. Complete Class Diagram
 
-- **Collections Example**
-  - `Arrays.asList()` converts an array into a list, acting as an adapter.
-
-- **Business Scenario**
-  - A food delivery platform wants to also sell groceries temporarily.  
-  - The grocery system has a different interface.  
-  - An **adapter** converts grocery items to the food item interface, allowing the platform to add groceries seamlessly.
+```mermaid
+classDiagram
+    %% ========== CLIENT ==========
+    class Client {
+        +main(String[] args)$
+    }
+    
+    %% ========== TARGET INTERFACE ==========
+    class WeighingMachineAdapter {
+        <<interface>>
+        +getWeightInKg(): double*
+    }
+    
+    %% ========== ADAPTEE INTERFACE ==========
+    class ImperialWeighingMachine {
+        <<interface>>
+        +getWeightInPounds(): double*
+    }
+    
+    %% ========== ADAPTEE IMPLEMENTATION ==========
+    class ImperialWeighingMachineImpl {
+        -double weightInPounds
+        +ImperialWeighingMachineImpl(weightInPounds: double)
+        +getWeightInPounds(): double
+    }
+    
+    %% ========== ADAPTER ==========
+    class WeightMachineAdapterImpl {
+        -ImperialWeighingMachine imperialMachine
+        +WeightMachineAdapterImpl(imperialMachine: ImperialWeighingMachine)
+        +getWeightInKg(): double
+    }
+    
+    %% ========== RELATIONSHIPS ==========
+    Client ..> WeighingMachineAdapter : uses
+    Client ..> ImperialWeighingMachineImpl : creates
+    
+    WeighingMachineAdapter <|.. WeightMachineAdapterImpl : implements
+    ImperialWeighingMachine <|.. ImperialWeighingMachineImpl : implements
+    
+    WeightMachineAdapterImpl o-- ImperialWeighingMachine : adapts
+    
+    note for Client "Client expects\nweight in KG"
+    note for WeighingMachineAdapter "Target Interface\nProvides metric units"
+    note for ImperialWeighingMachine "Adaptee Interface\nExisting system"
+    note for WeightMachineAdapterImpl "Adapter converts\npounds to kg\nusing 0.453592 factor"
+```
 
 ---
 
-## How It Works (Step by Step)
+### 2. Adapter Pattern Structure (Generic)
 
-1. **Existing System** – Already implemented (e.g., `FoodItem`).  
-2. **Incompatible System** – Needs to be adapted (e.g., `GroceryItem`).  
-3. **Adapter Class** – Implements the target interface (`Item`) and wraps the incompatible object (`GroceryItem`).  
-4. **Client** – Uses the adapter as if it were the target interface.
+```mermaid
+classDiagram
+    class Client {
+        +operation()
+    }
+    
+    class Target {
+        <<interface>>
+        +request()*
+    }
+    
+    class Adapter {
+        -Adaptee adaptee
+        +request()
+    }
+    
+    class Adaptee {
+        +specificRequest()
+    }
+    
+    Client ..> Target : uses
+    Target <|.. Adapter : implements
+    Adapter o-- Adaptee : adapts
+    
+    note for Target "Interface expected\nby client"
+    note for Adaptee "Existing incompatible\ninterface"
+    note for Adapter "Converts Target calls\nto Adaptee calls"
+```
 
 ---
 
-## Benefits
+### 3. Sequence Diagram - Weight Conversion Flow
 
-- Promotes **reusability** of existing classes.  
-- **Decouples client code** from the incompatible system.  
-- Simplifies **integration** with third-party or legacy systems.  
-- Can be applied **without modifying existing code**.
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Adapter as WeightMachineAdapterImpl
+    participant Adaptee as ImperialWeighingMachineImpl
+    
+    Note over Client,Adaptee: Weight Conversion Process
+    
+    Client->>Adaptee: new ImperialWeighingMachineImpl(25.0)
+    activate Adaptee
+    Adaptee->>Adaptee: weightInPounds = 25.0
+    Adaptee-->>Client: imperialMachine
+    deactivate Adaptee
+    
+    Client->>Adapter: new WeightMachineAdapterImpl(imperialMachine)
+    activate Adapter
+    Adapter->>Adapter: this.imperialMachine = imperialMachine
+    Adapter-->>Client: adapter
+    deactivate Adapter
+    
+    Client->>Adapter: getWeightInKg()
+    activate Adapter
+    
+    Adapter->>Adaptee: getWeightInPounds()
+    activate Adaptee
+    Adaptee-->>Adapter: 25.0 pounds
+    deactivate Adaptee
+    
+    Adapter->>Adapter: convert: 25.0 * 0.453592
+    Note over Adapter: Conversion: 11.3398 kg
+    
+    Adapter-->>Client: 11.3398 kg
+    deactivate Adapter
+    
+    Client->>Client: Display result
+```
 
 ---
 
-## Key Points for Freshers
+### 4. Component Interaction Diagram
 
-- Adapter pattern is about **interface compatibility**, not object creation.  
-- Prefer **object-level adapters** for flexibility.  
-- Useful in **legacy system integration** or **third-party API integration**.  
-- Helps in **extending functionality** without changing existing code.
+```mermaid
+flowchart LR
+    Client[Client<br/>Expects KG]
+    
+    Target[Target Interface<br/>WeighingMachineAdapter<br/>getWeightInKg]
+    
+    Adapter[Adapter<br/>WeightMachineAdapterImpl<br/>Conversion Logic]
+    
+    Adaptee[Adaptee<br/>ImperialWeighingMachine<br/>getWeightInPounds]
+    
+    Client -->|Uses| Target
+    Target -.->|Implemented by| Adapter
+    Adapter -->|Wraps| Adaptee
+    Adaptee -->|Returns| Pounds[25 pounds]
+    Adapter -->|Converts| KG[11.34 kg]
+    KG -->|Returns to| Client
+    
+    style Client fill:#e3f2fd
+    style Target fill:#fff3e0
+    style Adapter fill:#c8e6c9
+    style Adaptee fill:#ffccbc
+    style Pounds fill:#ffebee
+    style KG fill:#e8f5e9
+```
 
 ---
 
-## References
+### 5. Pattern Participants Diagram
 
-- [JavaDevJournal: Adapter Design Pattern](https://www.javadevjournal.com/java-design-patterns/adapter-design-pattern/)  
-- [ProgrammerGirl: Java Adapter Pattern](https://www.programmergirl.com/java-adapter-pattern/)  
-- [CECS Wright: Adapter Pattern Explanation](https://cecs.wright.edu/~tkprasad/courses/ceg860/paper/node26.html)
+```mermaid
+graph TB
+    subgraph "Adapter Pattern Participants"
+        Client[Client<br/>- Uses Target interface<br/>- Unaware of Adaptee]
+        Target[Target Interface<br/>- Defines domain-specific interface<br/>- getWeightInKg]
+        Adapter[Adapter<br/>- Implements Target interface<br/>- Wraps Adaptee<br/>- Performs conversion]
+        Adaptee[Adaptee<br/>- Existing interface<br/>- getWeightInPounds<br/>- Cannot be modified]
+    end
+    
+    Client -->|depends on| Target
+    Adapter -->|implements| Target
+    Adapter -->|contains| Adaptee
+    
+    style Client fill:#4CAF50,color:#fff
+    style Target fill:#2196F3,color:#fff
+    style Adapter fill:#FF9800,color:#fff
+    style Adaptee fill:#F44336,color:#fff
+```
+
+---
+
+### 6. Object Diagram - Runtime Instance
+
+```mermaid
+graph LR
+    subgraph "Client Layer"
+        CL[client: Client]
+    end
+    
+    subgraph "Adapter Instance"
+        AD["adapter: WeightMachineAdapterImpl<br/>imperialMachine reference"]
+    end
+    
+    subgraph "Adaptee Instance"
+        IM["imperialMachine: ImperialWeighingMachineImpl<br/>weightInPounds = 25.0"]
+    end
+    
+    CL -->|uses| AD
+    CL -.->|creates| IM
+    AD -->|has-a| IM
+    
+    style CL fill:#e1f5ff
+    style AD fill:#ffe1f5
+    style IM fill:#fff4e1
+```
+
+---
+
+## Pattern Components
+
+| Component | Role | Description |
+|-----------|------|-------------|
+| **Client** | User of Target interface | Expects weight in kilograms |
+| **Target** | WeighingMachineAdapter | Interface client expects (metric) |
+| **Adapter** | WeightMachineAdapterImpl | Converts pounds to kilograms |
+| **Adaptee** | ImperialWeighingMachine | Existing system (imperial) |
+
+---
+
+## Key Relationships
+
+| Relationship | Type | Description |
+|--------------|------|-------------|
+| Client → Target | Dependency | Client uses target interface |
+| Adapter → Target | Implementation | Adapter implements target |
+| Adapter → Adaptee | Composition | Adapter wraps adaptee |
+
+---
+
+## Conversion Formula
+
+```
+Weight in Kilograms = Weight in Pounds × 0.453592
+
+Example:
+25 pounds × 0.453592 = 11.3398 kilograms
+```
